@@ -1,0 +1,31 @@
+.wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 28px; font-size: 14px; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; margin-bottom: 20px;
+}
+.drop { display: flex; flex-direction: column; gap: 14px; }
+input[type=file] { font-size: 14px; }
+.preview { max-width: 100%; max-height: 320px; border-radius: 8px; border: 1px solid var(--border); }
+button {
+  align-self: flex-start; background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; padding: 10px 18px; font-size: 15px; cursor: pointer;
+}
+button:disabled { opacity: .5; cursor: not-allowed; }
+.error { color: var(--danger); font-size: 14px; }
+.verdict { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.badge { padding: 4px 12px; border-radius: 999px; font-weight: 600; color: #fff; font-size: 14px; }
+.badge.nevus { background: var(--nevus); }
+.badge.melanoma { background: var(--melanoma); }
+.prob { font-size: 28px; font-weight: 700; }
+.meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.warn {
+  background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 500; }
+td.val { text-align: right; font-variant-numeric: tabular-nums; }
+details summary { cursor: pointer; color: var(--accent); font-size: 14px; }

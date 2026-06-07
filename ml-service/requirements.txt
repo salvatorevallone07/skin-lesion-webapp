@@ -1,0 +1,13 @@
+# Pipeline (aligned with the original repository)
+numpy==2.2.6
+opencv-python-headless==4.12.0.88
+pandas==2.3.3
+torch==2.9.1
+kagglehub==0.4.0
+# Improved features (LBP, GLCM, entropy) + training metrics/splits
+scikit-image==0.25.2
+scikit-learn==1.6.1
+# API service
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20

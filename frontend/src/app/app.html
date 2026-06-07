@@ -1,0 +1,55 @@
+<div class="wrap">
+  <h1>Classificazione lesioni cutanee</h1>
+  <p class="sub">Carica un'immagine dermatoscopica: il modello la classifica come nevo melanocitico o melanoma.</p>
+
+  <div class="card">
+    <div class="drop">
+      <input type="file" accept="image/*" (change)="onFileSelected($event)" />
+      @if (previewUrl()) {
+        <img class="preview" [src]="previewUrl()" alt="Anteprima immagine caricata" />
+      }
+      <button (click)="analyze()" [disabled]="!selectedFile() || loading()">
+        {{ loading() ? 'Analisi in corso...' : 'Analizza' }}
+      </button>
+      @if (error()) {
+        <div class="error">{{ error() }}</div>
+      }
+    </div>
+  </div>
+
+  @if (result()) {
+    <div class="card">
+      @if (result()!.modelTrained === false) {
+        <div class="warn">
+          Modello non addestrato (versione di sviluppo): la predizione non è clinicamente
+          significativa. Esegui lo script di training per generare i pesi reali.
+        </div>
+      }
+
+      <div class="verdict">
+        <span class="badge" [class.melanoma]="isMelanoma()" [class.nevus]="!isMelanoma()">
+          {{ classLabel() }}
+        </span>
+      </div>
+      <div class="prob">{{ probabilityPct() }}</div>
+      <div class="meta">probabilità di melanoma (soglia {{ result()!.thresholdUsed }})</div>
+
+      <div class="meta">
+        Modello: {{ result()!.modelVersion }} · {{ result()!.imageWidth }}×{{ result()!.imageHeight }} px
+        · {{ result()!.inferenceMs }} ms · id {{ result()!.id }}
+      </div>
+
+      <details>
+        <summary>Feature estratte ({{ featureList().length }})</summary>
+        <table>
+          <thead><tr><th>Feature</th><th class="val">Valore</th></tr></thead>
+          <tbody>
+            @for (f of featureList(); track f.name) {
+              <tr><td>{{ f.name }}</td><td class="val">{{ f.value | number:'1.0-4' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    </div>
+  }
+</div>

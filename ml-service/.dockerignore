@@ -1,0 +1,4 @@
+model/*.pt
+model/*.json
+__pycache__/
+*.pyc
