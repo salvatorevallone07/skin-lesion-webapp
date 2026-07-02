@@ -75,12 +75,34 @@ def load_features(args):
     return X, Y, feature_names
 
 
-def pick_threshold(y_true, y_prob, target_recall=None):
+def pick_threshold(y_true, y_prob, strategy="youden", target_recall=None, target_precision=None):
+    """Decision-threshold selection, chosen on the validation set.
+
+    - "target_recall"    : lowest threshold that reaches >= target_recall (old default
+                            behaviour when --target-recall is passed; maximizes melanoma
+                            sensitivity, at the cost of many false positives)
+    - "target_precision" : lowest threshold that reaches >= target_precision
+    - "max_f1"            : threshold maximizing F1 (precision/recall balance) - DEFAULT.
+                            Raises precision substantially over Youden's J without
+                            requiring a hand-picked target.
+    - "youden"            : Youden's J (max TPR - FPR); tends to favor recall on
+                            imbalanced data like this one.
+    """
     fpr, tpr, thr = roc_curve(y_true, y_prob)
-    if target_recall is not None:
+    if strategy == "target_recall" or target_recall is not None:
         ok = np.where(tpr >= target_recall)[0]
         if len(ok):
             return float(thr[ok[0]])
+        return float(thr[int(np.argmax(tpr - fpr))])
+    if strategy == "target_precision" or target_precision is not None:
+        for t in sorted(thr):
+            pred = (y_prob >= t).astype(int)
+            if precision_score(y_true, pred, zero_division=0) >= target_precision:
+                return float(t)
+        return float(thr.max())
+    if strategy == "max_f1":
+        f1s = [f1_score(y_true, (y_prob >= t).astype(int), zero_division=0) for t in thr]
+        return float(thr[int(np.argmax(f1s))])
     j = tpr - fpr                      # Youden's J
     return float(thr[int(np.argmax(j))])
 
@@ -99,8 +121,10 @@ def evaluate(name, y_true, y_prob, threshold):
     print(f"  confusion  : TN={tn} FP={fp} FN={fn} TP={tp}")
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision": float(precision_score(y_true, y_pred, zero_division=0)),
         "recall": float(recall_score(y_true, y_pred, zero_division=0)),
         "specificity": float(spec),
+        "f1": float(f1_score(y_true, y_pred, zero_division=0)),
         "roc_auc": float(roc_auc_score(y_true, y_prob)),
     }
 
@@ -119,7 +143,19 @@ def main():
     p.add_argument("--val-ratio", type=float, default=0.15)
     p.add_argument("--test-ratio", type=float, default=0.15)
     p.add_argument("--target-recall", type=float, default=None,
-                   help="if set, pick the threshold that reaches this melanoma recall")
+                   help="if set, pick the threshold that reaches this melanoma recall "
+                        "(implies --threshold-strategy target_recall)")
+    p.add_argument("--target-precision", type=float, default=None,
+                   help="if set, pick the threshold that reaches this precision "
+                        "(implies --threshold-strategy target_precision)")
+    p.add_argument("--threshold-strategy", type=str, default="max_f1",
+                   choices=["youden", "max_f1", "target_recall", "target_precision"],
+                   help="how to pick the decision threshold on the validation set "
+                        "(default: max_f1, which raises precision over Youden's J)")
+    p.add_argument("--pos-weight-scale", type=float, default=1.0,
+                   help="multiplier on the class-imbalance pos_weight used by "
+                        "BCEWithLogitsLoss; <1.0 makes the model less eager to predict "
+                        "melanoma, trading recall for precision")
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
@@ -154,7 +190,7 @@ def main():
     model = Classifier(input_dim=Xtr.shape[1], hidden_dims=HIDDEN_DIMS, dropout=args.dropout)
     num_pos = float(y_tr.sum())
     num_neg = float(len(y_tr) - num_pos)
-    pos_weight = torch.tensor([num_neg / max(num_pos, 1.0)])
+    pos_weight = torch.tensor([(num_neg / max(num_pos, 1.0)) * args.pos_weight_scale])
     criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -187,7 +223,8 @@ def main():
         val_prob = torch.sigmoid(model(Xval)).numpy()
         test_prob = torch.sigmoid(model(Xtest)).numpy()
 
-    threshold = pick_threshold(y_val, val_prob, args.target_recall)
+    threshold = pick_threshold(y_val, val_prob, args.threshold_strategy,
+                                args.target_recall, args.target_precision)
     evaluate("VALIDATION", y_val, val_prob, threshold)
     test_metrics = evaluate("TEST", y_test, test_prob, threshold)
 
